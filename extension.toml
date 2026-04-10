@@ -2,8 +2,9 @@ id = "mikrotik-routeros"
 name = "MikroTik RouterOS"
 version = "0.1.0"
 schema_version = 1
-authors = ["Codex"]
+authors = ["Andrey Lebedev"]
 description = "RouterOS syntax support and command completion for Zed."
+repository = "https://github.com/Azagtot/zed-mikrotik-routeros"
 
 [language_servers.routeros-lsp]
 name = "RouterOS LSP"
