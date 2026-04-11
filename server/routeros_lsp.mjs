@@ -4,7 +4,7 @@ import { stdin, stdout, exit } from "node:process";
 
 const SERVER_INFO = {
   name: "mikrotik-routeros-zed",
-  version: "0.1.6",
+  version: "0.1.7",
 };
 
 const TOKEN_TYPES = [

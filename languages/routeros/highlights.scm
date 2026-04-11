@@ -6,21 +6,29 @@
 ] @string
 
 (command_name) @function
-(variable_name) @variable
+(variable_name) @property
 (function_definition name: (word) @function)
 (file_descriptor) @number
 (comment) @comment
 
 [
+  "case"
   "do"
+  "done"
+  "elif"
   "else"
+  "esac"
+  "export"
+  "fi"
   "for"
+  "function"
   "if"
+  "in"
+  "select"
+  "then"
+  "unset"
+  "until"
   "while"
-  "return"
-  "global"
-  "local"
-  "foreach"
 ] @keyword
 
 [
@@ -38,35 +46,31 @@
   "|"
 ] @operator
 
+(
+  (command (_) @constant)
+  (#match? @constant "^-")
+)
+
 ((word) @namespace
   (#match? @namespace "^/"))
 
 ((word) @keyword
-  (#match? @keyword "^:(if|for|foreach|while|local|global|set|return|delay|do)$"))
-
-((word) @function
-  (#match? @function "^:[A-Za-z][A-Za-z0-9-]*$"))
+  (#match? @keyword "^:"))
 
 ((word) @property
   (#match? @property "^[A-Za-z0-9._-]+=$"))
-
-((word) @variable
-  (#match? @variable "^\\$[A-Za-z_][A-Za-z0-9_]*$"))
 
 ((word) @constant
   (#match? @constant "^(yes|no|true|false)$"))
 
 ((word) @number
-  (#match? @number "^[0-9]+(\\.[0-9]+)?([smhdw])?$"))
+  (#match? @number "^[0-9]+([smhdw]|\\.[0-9]+)?$"))
+
+((word) @type
+  (#match? @type "^(input|output|forward|prerouting|postrouting|srcnat|dstnat)$"))
 
 ((word) @keyword
-  (#match? @keyword "^(do|if|else|while|for|foreach|return|global|local)$"))
+  (#match? @keyword "^(accept|drop|reject|log|fasttrack-connection|jump|return|passthrough|mark-routing|mark-connection|mark-packet|src-nat|masquerade|dst-nat|netmap|redirect|same|notrack)$"))
 
-((word) @function
-  (#match? @function "^(put|print|log|delay|error|terminal|time|ping|environment|file|interface|ip|system|tool|user|queue|routing|port|ppp|radius|snmp|special-login|store)$"))
-
-((word) @operator
-  (#match? @operator "^(and|or|in|not)$"))
-
-((word) @operator
-  (#match? @operator "^(=|\\+|-|\\*|/|<|>|<=|>=)$"))
+((word) @keyword
+  (#match? @keyword "^(add|set|remove|print|enable|disable|export|find|edit|get|monitor|reset-counters|move|rename|copy|make-static|setup)$"))
