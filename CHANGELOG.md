@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.7
+
+- restore the last known working tree-sitter highlight query for Zed syntax coloring
+- fix a regression where the VS Code style highlight alignment reduced or broke syntax highlighting in Zed
+- keep hover, go to definition, snippets, and semantic token improvements from recent releases
+
 ## 0.1.6
 
 - add go to definition for `:global ... do=` functions and `$name` symbol references in the current file
