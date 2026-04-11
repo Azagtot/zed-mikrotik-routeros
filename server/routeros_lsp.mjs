@@ -4,7 +4,7 @@ import { stdin, stdout, exit } from "node:process";
 
 const SERVER_INFO = {
   name: "mikrotik-routeros-zed",
-  version: "0.1.5",
+  version: "0.1.6",
 };
 
 const TOKEN_TYPES = [
@@ -590,6 +590,8 @@ function handleMessage(message) {
     reply(message.id, {
       capabilities: {
         textDocumentSync: 1,
+        hoverProvider: true,
+        definitionProvider: true,
         completionProvider: {
           triggerCharacters: ["/", " ", "-", "=", ":", "$"],
           resolveProvider: false,
@@ -651,6 +653,16 @@ function handleMessage(message) {
       isIncomplete: false,
       items,
     });
+    return;
+  }
+
+  if (message.method === "textDocument/definition") {
+    reply(message.id, getDefinition(message.params));
+    return;
+  }
+
+  if (message.method === "textDocument/hover") {
+    reply(message.id, getHover(message.params));
     return;
   }
 
@@ -737,6 +749,65 @@ function getCompletionItems(params) {
   }
 
   return dedupe(filterByPrefix(suggestions, activeToken));
+}
+
+function getDefinition(params) {
+  const { uri } = params.textDocument;
+  const text = documents.get(uri) ?? "";
+  const symbol = getSymbolAtPosition(text, params.position);
+  if (!symbol) {
+    return null;
+  }
+
+  const definition = findDefinitionInText(text, normalizeLookupSymbol(symbol));
+  if (!definition) {
+    return null;
+  }
+
+  return {
+    uri,
+    range: definition.range,
+  };
+}
+
+function getHover(params) {
+  const { uri } = params.textDocument;
+  const text = documents.get(uri) ?? "";
+  const symbol = getSymbolAtPosition(text, params.position);
+  if (!symbol) {
+    return null;
+  }
+
+  const normalizedSymbol = normalizeLookupSymbol(symbol);
+  const definition = findDefinitionInText(text, normalizedSymbol);
+  if (!definition) {
+    return null;
+  }
+
+  if (definition.kind === "function") {
+    const docs = collectLeadingCommentBlock(text, definition.line);
+    if (docs.length > 0) {
+      return {
+        contents: {
+          kind: "markdown",
+          value: `**Function Documentation**\n\n${docs.join("\n")}`,
+        },
+        range: definition.range,
+      };
+    }
+  }
+
+  if (definition.kind === "variable" && definition.value) {
+    return {
+      contents: {
+        kind: "markdown",
+        value: `Variable value: \`${escapeMarkdownInlineCode(definition.value)}\``,
+      },
+      range: definition.range,
+    };
+  }
+
+  return null;
 }
 
 function detectPathContext(tokens, activeToken, endedWithSpace) {
@@ -886,6 +957,85 @@ function dedupe(items) {
   }
 
   return unique;
+}
+
+function getSymbolAtPosition(text, position) {
+  const lines = text.split(/\r?\n/);
+  const line = lines[position.line] ?? "";
+  const matches = line.matchAll(/[:$]?[A-Za-z_][A-Za-z0-9_-]*/g);
+  for (const match of matches) {
+    const start = match.index ?? 0;
+    const end = start + match[0].length;
+    if (position.character >= start && position.character <= end) {
+      return match[0];
+    }
+  }
+  return null;
+}
+
+function normalizeLookupSymbol(symbol) {
+  return symbol.replace(/^[$:]/, "");
+}
+
+function findDefinitionInText(text, symbol) {
+  const lines = text.split(/\r?\n/);
+  const functionRegex = new RegExp(`^\\s*:global\\s+${escapeRegExp(symbol)}\\s+do=`);
+  const variableRegex = new RegExp(`^\\s*:(global|local)\\s+${escapeRegExp(symbol)}\\b(?:\\s*(?:=|;)|\\s|$)`);
+  const variableValueRegex = new RegExp(`^\\s*:(global|local)\\s+${escapeRegExp(symbol)}\\s+"([^"]*)"`);
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex];
+    if (functionRegex.test(line)) {
+      const start = line.indexOf(symbol);
+      return {
+        kind: "function",
+        line: lineIndex,
+        range: makeRange(lineIndex, start, symbol.length),
+      };
+    }
+  }
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex];
+    if (variableRegex.test(line)) {
+      const start = line.indexOf(symbol);
+      const valueMatch = line.match(variableValueRegex);
+      return {
+        kind: "variable",
+        line: lineIndex,
+        value: valueMatch?.[2] ?? null,
+        range: makeRange(lineIndex, start, symbol.length),
+      };
+    }
+  }
+
+  return null;
+}
+
+function collectLeadingCommentBlock(text, lineIndex) {
+  const lines = text.split(/\r?\n/);
+  const docs = [];
+
+  for (let index = lineIndex - 1; index >= 0; index -= 1) {
+    const trimmed = lines[index].trim();
+    if (!trimmed.startsWith("#")) {
+      break;
+    }
+    docs.unshift(trimmed.slice(1).trim());
+  }
+
+  return docs;
+}
+
+function makeRange(line, character, length) {
+  return {
+    start: { line, character: Math.max(0, character) },
+    end: { line, character: Math.max(0, character) + Math.max(1, length) },
+  };
+}
+
+function escapeMarkdownInlineCode(value) {
+  return value.replace(/`/g, "\\`");
 }
 
 function buildSemanticTokens(text) {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6
+
+- add go to definition for `:global ... do=` functions and `$name` symbol references in the current file
+- add hover documentation from leading `#` comments above global function definitions
+- add hover for simple string-valued `:global` and `:local` declarations
+
 ## 0.1.5
 
 - align fallback syntax highlighting more closely with the VS Code RouterOS extension
