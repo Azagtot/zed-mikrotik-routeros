@@ -1,6 +1,6 @@
 id = "mikrotik-routeros"
 name = "MikroTik RouterOS"
-version = "0.1.4"
+version = "0.1.5"
 schema_version = 1
 authors = ["Andrey Lebedev"]
 description = "RouterOS syntax support and command completion for Zed."

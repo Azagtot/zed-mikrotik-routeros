@@ -4,7 +4,7 @@ import { stdin, stdout, exit } from "node:process";
 
 const SERVER_INFO = {
   name: "mikrotik-routeros-zed",
-  version: "0.1.4",
+  version: "0.1.5",
 };
 
 const TOKEN_TYPES = [
@@ -20,6 +20,33 @@ const TOKEN_TYPES = [
 ];
 
 const TOKEN_MODIFIERS = [];
+const TEXTMATE_KEYWORDS = ["do", "if", "else", "while", "for", "foreach", "return", "global", "local"];
+const TEXTMATE_BUILTIN_COMMANDS = [
+  "put",
+  "print",
+  "log",
+  "delay",
+  "error",
+  "terminal",
+  "time",
+  "ping",
+  "environment",
+  "file",
+  "interface",
+  "ip",
+  "system",
+  "tool",
+  "user",
+  "queue",
+  "routing",
+  "port",
+  "ppp",
+  "radius",
+  "snmp",
+  "special-login",
+  "store",
+];
+const TEXTMATE_OPERATOR_WORDS = ["and", "or", "in", "not"];
 
 const PATH_TREE = {
   "/ip": ["address", "route", "firewall", "dns", "dhcp-client", "dhcp-server", "pool", "service", "neighbor", "arp", "cloud", "hotspot", "ipsec"],
@@ -306,6 +333,30 @@ const VALUE_SUGGESTIONS = {
 
 const SNIPPETS = [
   {
+    contexts: [],
+    label: "gfunc",
+    detail: "Global function with documentation",
+    insertText: "# ${1:Function description}\n# Parameters:\n#   ${2:param} - ${3:description}\n# Returns:\n#   ${4:return description}\n:global ${5:functionName} do={\n    ${0}\n}",
+  },
+  {
+    contexts: [],
+    label: "if",
+    detail: "If statement",
+    insertText: ":if (${1:condition}) do={\n    ${0}\n}",
+  },
+  {
+    contexts: [],
+    label: "foreach",
+    detail: "Foreach loop",
+    insertText: ":foreach ${1:item} in=${2:collection} do={\n    ${0}\n}",
+  },
+  {
+    contexts: [],
+    label: "try",
+    detail: "Error handler",
+    insertText: "do {\n    ${1}\n} on-error={\n    :log error \"${2:Error message}\"\n}",
+  },
+  {
     contexts: ["/ip/firewall/filter"],
     label: "drop wan input",
     detail: "Firewall filter template",
@@ -540,7 +591,7 @@ function handleMessage(message) {
       capabilities: {
         textDocumentSync: 1,
         completionProvider: {
-          triggerCharacters: ["/", " ", "-", "=", ":"],
+          triggerCharacters: ["/", " ", "-", "=", ":", "$"],
           resolveProvider: false,
         },
         semanticTokensProvider: {
@@ -629,6 +680,23 @@ function getCompletionItems(params) {
   const activeToken = endedWithSpace ? "" : (tokens.at(-1) ?? "");
   const completedTokens = endedWithSpace ? tokens : tokens.slice(0, -1);
   const pathInfo = detectPathContext(tokens, activeToken, endedWithSpace);
+  const symbols = collectDocumentSymbols(text);
+
+  if (activeToken.startsWith("$")) {
+    const suggestions = [
+      ...symbols.functions.map((item) => completion(`$${item}`, 3, "function reference")),
+      ...symbols.variables.map((item) => completion(`$${item}`, 6, "variable reference")),
+    ];
+    return dedupe(filterByPrefix(suggestions, activeToken));
+  }
+
+  if (activeToken.startsWith(":")) {
+    const suggestions = [
+      ...CONTROL_KEYWORDS.map((item) => completion(item, 14, "keyword")),
+      ...TEXTMATE_BUILTIN_COMMANDS.map((item) => completion(`:${item}`, 3, "command")),
+    ];
+    return dedupe(filterByPrefix(suggestions, activeToken));
+  }
 
   if (pathInfo.inPath) {
     const items = [
@@ -773,13 +841,27 @@ function snippetCompletion(label, detail, insertText) {
 }
 
 function getSnippetCompletions(fullPath) {
-  if (!fullPath) {
-    return [];
+  return SNIPPETS
+    .filter((snippet) => snippet.contexts.length === 0 || snippet.contexts.includes(fullPath))
+    .map((snippet) => snippetCompletion(snippet.label, snippet.detail, snippet.insertText));
+}
+
+function collectDocumentSymbols(text) {
+  const functions = new Set();
+  const variables = new Set();
+
+  for (const match of text.matchAll(/:global\s+([A-Za-z_][A-Za-z0-9_]*)\s+do=/g)) {
+    functions.add(match[1]);
   }
 
-  return SNIPPETS
-    .filter((snippet) => snippet.contexts.includes(fullPath))
-    .map((snippet) => snippetCompletion(snippet.label, snippet.detail, snippet.insertText));
+  for (const match of text.matchAll(/:(?:global|local)\s+([A-Za-z_][A-Za-z0-9_]*)\b/g)) {
+    variables.add(match[1]);
+  }
+
+  return {
+    functions: [...functions].sort(),
+    variables: [...variables].sort(),
+  };
 }
 
 function filterByPrefix(items, prefix) {
@@ -836,7 +918,17 @@ function buildSemanticTokens(text) {
       pushToken(lineIndex, match.index ?? 0, match[0].length, "string");
     }
 
-    for (const match of line.slice(0, semanticRangeEnd).matchAll(/\$\w+/g)) {
+    for (const match of line.slice(0, semanticRangeEnd).matchAll(/:global\s+([A-Za-z_][A-Za-z0-9_]*)\s+do=/g)) {
+      const start = (match.index ?? 0) + match[0].indexOf(match[1]);
+      pushToken(lineIndex, start, match[1].length, "function");
+    }
+
+    for (const match of line.slice(0, semanticRangeEnd).matchAll(/:(?:local|global)\s+([A-Za-z_][A-Za-z0-9_]*)/g)) {
+      const start = (match.index ?? 0) + match[0].indexOf(match[1]);
+      pushToken(lineIndex, start, match[1].length, "variable");
+    }
+
+    for (const match of line.slice(0, semanticRangeEnd).matchAll(/\$[A-Za-z_][A-Za-z0-9_]*/g)) {
       pushToken(lineIndex, match.index ?? 0, match[0].length, "variable");
     }
 
@@ -849,7 +941,12 @@ function buildSemanticTokens(text) {
       const start = (match.index ?? 0) + match[0].lastIndexOf(token);
 
       if (token.startsWith(":")) {
-        pushToken(lineIndex, start, token.length, "keyword");
+        const bareToken = token.slice(1);
+        if (TEXTMATE_KEYWORDS.includes(bareToken)) {
+          pushToken(lineIndex, start, token.length, "keyword");
+        } else {
+          pushToken(lineIndex, start, token.length, "function");
+        }
         continue;
       }
 
@@ -860,6 +957,30 @@ function buildSemanticTokens(text) {
 
       if (token.startsWith("/")) {
         pushToken(lineIndex, start, token.length, "namespace");
+      }
+    }
+
+    for (const keyword of TEXTMATE_KEYWORDS) {
+      const regex = new RegExp(`(^|\\s)(${escapeRegExp(keyword)})(?=\\s|$)`, "g");
+      for (const match of line.slice(0, semanticRangeEnd).matchAll(regex)) {
+        const start = (match.index ?? 0) + match[0].lastIndexOf(keyword);
+        pushToken(lineIndex, start, keyword.length, "keyword");
+      }
+    }
+
+    for (const builtin of TEXTMATE_BUILTIN_COMMANDS) {
+      const regex = new RegExp(`(^|\\s)(${escapeRegExp(builtin)})(?=\\s|$)`, "g");
+      for (const match of line.slice(0, semanticRangeEnd).matchAll(regex)) {
+        const start = (match.index ?? 0) + match[0].lastIndexOf(builtin);
+        pushToken(lineIndex, start, builtin.length, "function");
+      }
+    }
+
+    for (const operatorWord of TEXTMATE_OPERATOR_WORDS) {
+      const regex = new RegExp(`(^|\\s)(${escapeRegExp(operatorWord)})(?=\\s|$)`, "g");
+      for (const match of line.slice(0, semanticRangeEnd).matchAll(regex)) {
+        const start = (match.index ?? 0) + match[0].lastIndexOf(operatorWord);
+        pushToken(lineIndex, start, operatorWord.length, "keyword");
       }
     }
 

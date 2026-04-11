@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5
+
+- align fallback syntax highlighting more closely with the VS Code RouterOS extension
+- add VS Code style snippets for `gfunc`, `if`, `foreach`, and `try`
+- add completion for global symbols after `$` and command-style completion after `:`
+
 ## 0.1.4
 
 - fix semantic token ordering so Zed can deserialize RouterOS highlighting correctly
