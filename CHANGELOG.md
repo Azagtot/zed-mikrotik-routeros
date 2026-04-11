@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- register the bundled `bash` tree-sitter grammar in `extension.toml`
+- fix syntax highlighting activation for `.rsc` files in Zed
+
 ## 0.1.0
 
 - initial Zed extension scaffold for MikroTik RouterOS
