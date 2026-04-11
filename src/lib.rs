@@ -1,6 +1,7 @@
 use zed_extension_api::{self as zed, Result};
 
 struct MikroTikRouterOsExtension;
+const ROUTEROS_LSP_SOURCE: &str = include_str!("../server/routeros_lsp.mjs");
 
 impl zed::Extension for MikroTikRouterOsExtension {
     fn new() -> Self {
@@ -18,7 +19,7 @@ impl zed::Extension for MikroTikRouterOsExtension {
 
         Ok(zed::Command {
             command: node,
-            args: vec!["server/routeros_lsp.mjs".to_string()],
+            args: vec!["-e".to_string(), ROUTEROS_LSP_SOURCE.to_string()],
             env: worktree.shell_env(),
         })
     }

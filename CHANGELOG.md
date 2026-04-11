@@ -11,6 +11,12 @@
 - add RouterOS-specific highlighting for paths, commands, actions, parameters, and booleans
 - ignore locally downloaded `grammars/` artifacts from dev installs
 
+## 0.1.3
+
+- embed the bundled RouterOS language server into the Rust extension
+- fix Zed launching the language server relative to the opened project instead of the extension directory
+- restore semantic highlighting, completions, and diagnostics for `.rsc` files
+
 ## 0.1.0
 
 - initial Zed extension scaffold for MikroTik RouterOS
