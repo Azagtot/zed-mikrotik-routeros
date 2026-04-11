@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.8
+
+- simplify semantic token coloring to better match the VS Code RouterOS grammar
+- stop semantically over-highlighting paths, parameter names, and command verbs in Zed
+- keep Zed syntax highlighting stable while making full semantic coloring visually closer to VS Code
+
 ## 0.1.7
 
 - restore the last known working tree-sitter highlight query for Zed syntax coloring

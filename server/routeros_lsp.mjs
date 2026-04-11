@@ -4,15 +4,12 @@ import { stdin, stdout, exit } from "node:process";
 
 const SERVER_INFO = {
   name: "mikrotik-routeros-zed",
-  version: "0.1.7",
+  version: "0.1.8",
 };
 
 const TOKEN_TYPES = [
-  "namespace",
   "keyword",
   "function",
-  "parameter",
-  "property",
   "variable",
   "string",
   "number",
@@ -1086,7 +1083,7 @@ function buildSemanticTokens(text) {
       pushToken(lineIndex, match.index ?? 0, match[0].length, "number");
     }
 
-    for (const match of line.slice(0, semanticRangeEnd).matchAll(/(^|\s)(:\w[\w-]*|\w[\w-]*=|\/[^\s]+)/g)) {
+    for (const match of line.slice(0, semanticRangeEnd).matchAll(/(^|\s)(:\w[\w-]*)/g)) {
       const token = match[2];
       const start = (match.index ?? 0) + match[0].lastIndexOf(token);
 
@@ -1097,16 +1094,6 @@ function buildSemanticTokens(text) {
         } else {
           pushToken(lineIndex, start, token.length, "function");
         }
-        continue;
-      }
-
-      if (token.endsWith("=")) {
-        pushToken(lineIndex, start, token.length, "property");
-        continue;
-      }
-
-      if (token.startsWith("/")) {
-        pushToken(lineIndex, start, token.length, "namespace");
       }
     }
 
@@ -1131,14 +1118,6 @@ function buildSemanticTokens(text) {
       for (const match of line.slice(0, semanticRangeEnd).matchAll(regex)) {
         const start = (match.index ?? 0) + match[0].lastIndexOf(operatorWord);
         pushToken(lineIndex, start, operatorWord.length, "keyword");
-      }
-    }
-
-    for (const verb of VERBS) {
-      const regex = new RegExp(`(^|\\s)(${escapeRegExp(verb)})(?=\\s|$)`, "g");
-      for (const match of line.slice(0, semanticRangeEnd).matchAll(regex)) {
-        const start = (match.index ?? 0) + match[0].lastIndexOf(verb);
-        pushToken(lineIndex, start, verb.length, "function");
       }
     }
   }
