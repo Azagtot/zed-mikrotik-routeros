@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+- fix semantic token ordering so Zed can deserialize RouterOS highlighting correctly
+- prevent invalid negative semantic token deltas from breaking rich syntax highlighting
+
 ## 0.1.1
 
 - register the bundled `bash` tree-sitter grammar in `extension.toml`

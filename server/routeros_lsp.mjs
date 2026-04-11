@@ -4,7 +4,7 @@ import { stdin, stdout, exit } from "node:process";
 
 const SERVER_INFO = {
   name: "mikrotik-routeros-zed",
-  version: "0.1.0",
+  version: "0.1.4",
 };
 
 const TOKEN_TYPES = [
@@ -808,21 +808,15 @@ function dedupe(items) {
 
 function buildSemanticTokens(text) {
   const data = [];
+  const tokens = [];
   const lines = text.split(/\r?\n/);
-  let previousLine = 0;
-  let previousStart = 0;
 
   const pushToken = (line, start, length, tokenType) => {
     const tokenTypeIndex = TOKEN_TYPES.indexOf(tokenType);
     if (tokenTypeIndex === -1 || length <= 0) {
       return;
     }
-
-    const deltaLine = line - previousLine;
-    const deltaStart = deltaLine === 0 ? start - previousStart : start;
-    data.push(deltaLine, deltaStart, length, tokenTypeIndex, 0);
-    previousLine = line;
-    previousStart = start;
+    tokens.push({ line, start, length, tokenTypeIndex });
   };
 
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
@@ -876,6 +870,32 @@ function buildSemanticTokens(text) {
         pushToken(lineIndex, start, verb.length, "function");
       }
     }
+  }
+
+  tokens.sort((left, right) => {
+    if (left.line !== right.line) {
+      return left.line - right.line;
+    }
+    if (left.start !== right.start) {
+      return left.start - right.start;
+    }
+    if (left.length !== right.length) {
+      return left.length - right.length;
+    }
+    return left.tokenTypeIndex - right.tokenTypeIndex;
+  });
+
+  let previousLine = 0;
+  let previousStart = 0;
+  for (const token of tokens) {
+    const deltaLine = token.line - previousLine;
+    const deltaStart = deltaLine === 0 ? token.start - previousStart : token.start;
+    if (deltaLine < 0 || deltaStart < 0) {
+      continue;
+    }
+    data.push(deltaLine, deltaStart, token.length, token.tokenTypeIndex, 0);
+    previousLine = token.line;
+    previousStart = token.start;
   }
 
   return data;
