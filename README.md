@@ -21,13 +21,16 @@ It currently provides:
 
 ## Recommended Zed settings
 
-For richer highlighting, enable semantic tokens:
+For richer RouterOS highlighting in Zed, enable semantic tokens for this language.
+This extension provides richer tokenization through its language server, while the
+tree-sitter fallback is intentionally basic because RouterOS syntax does not map
+cleanly to Bash.
 
 ```json
 {
   "languages": {
     "RouterOS Script": {
-      "semantic_tokens": "combined"
+      "semantic_tokens": "full"
     }
   }
 }
