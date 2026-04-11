@@ -5,6 +5,12 @@
 - register the bundled `bash` tree-sitter grammar in `extension.toml`
 - fix syntax highlighting activation for `.rsc` files in Zed
 
+## 0.1.2
+
+- replace the minimal highlight query with a real `bash`-based highlight query
+- add RouterOS-specific highlighting for paths, commands, actions, parameters, and booleans
+- ignore locally downloaded `grammars/` artifacts from dev installs
+
 ## 0.1.0
 
 - initial Zed extension scaffold for MikroTik RouterOS
