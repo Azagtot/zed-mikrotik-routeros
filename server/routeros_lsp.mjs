@@ -4,15 +4,15 @@ import { stdin, stdout, exit } from "node:process";
 
 const SERVER_INFO = {
   name: "mikrotik-routeros-zed",
-  version: "0.1.8",
+  version: "0.1.9",
 };
 
 const TOKEN_TYPES = [
   "keyword",
   "function",
+  "property",
   "variable",
   "string",
-  "number",
   "comment",
 ];
 
@@ -1079,10 +1079,6 @@ function buildSemanticTokens(text) {
       pushToken(lineIndex, match.index ?? 0, match[0].length, "variable");
     }
 
-    for (const match of line.slice(0, semanticRangeEnd).matchAll(/\b\d+\b/g)) {
-      pushToken(lineIndex, match.index ?? 0, match[0].length, "number");
-    }
-
     for (const match of line.slice(0, semanticRangeEnd).matchAll(/(^|\s)(:\w[\w-]*)/g)) {
       const token = match[2];
       const start = (match.index ?? 0) + match[0].lastIndexOf(token);
@@ -1120,6 +1116,11 @@ function buildSemanticTokens(text) {
         pushToken(lineIndex, start, operatorWord.length, "keyword");
       }
     }
+
+    const semanticTokens = classifyRouterOsLine(line.slice(0, semanticRangeEnd));
+    for (const token of semanticTokens) {
+      pushToken(lineIndex, token.start, token.length, token.type);
+    }
   }
 
   tokens.sort((left, right) => {
@@ -1149,6 +1150,102 @@ function buildSemanticTokens(text) {
   }
 
   return data;
+}
+
+function classifyRouterOsLine(line) {
+  const classified = [];
+  const lexed = lexRouterOsLine(line);
+  let inPathPrefix = false;
+
+  for (const token of lexed) {
+    const text = token.text;
+
+    if (!text) {
+      continue;
+    }
+
+    if (text.startsWith("/")) {
+      inPathPrefix = true;
+      continue;
+    }
+
+    if (inPathPrefix) {
+      if (VERBS.includes(text)) {
+        classified.push({ start: token.start, length: token.length, type: "keyword" });
+        inPathPrefix = false;
+        continue;
+      }
+
+      if (!text.startsWith(":") && !text.startsWith("$") && !text.includes("=") && text !== "\\" && text !== "[" && text !== "]") {
+        classified.push({ start: token.start, length: token.length, type: "property" });
+        continue;
+      }
+    }
+
+    const equalsIndex = text.indexOf("=");
+    if (equalsIndex > 0) {
+      const key = text.slice(0, equalsIndex);
+      const value = text.slice(equalsIndex + 1);
+      if (/^[A-Za-z0-9._-]+$/.test(key)) {
+        classified.push({ start: token.start, length: key.length, type: "property" });
+      }
+      if (value && !(value.startsWith("\"") && value.endsWith("\""))) {
+        classified.push({
+          start: token.start + equalsIndex + 1,
+          length: value.length,
+          type: "variable",
+        });
+      }
+      inPathPrefix = false;
+      continue;
+    }
+
+    if (VERBS.includes(text)) {
+      classified.push({ start: token.start, length: token.length, type: "keyword" });
+      inPathPrefix = false;
+      continue;
+    }
+  }
+
+  return classified;
+}
+
+function lexRouterOsLine(line) {
+  const tokens = [];
+  let index = 0;
+
+  while (index < line.length) {
+    const char = line[index];
+    if (/\s/.test(char)) {
+      index += 1;
+      continue;
+    }
+
+    const start = index;
+    if (char === "\"") {
+      index += 1;
+      while (index < line.length) {
+        if (line[index] === "\\" && index + 1 < line.length) {
+          index += 2;
+          continue;
+        }
+        if (line[index] === "\"") {
+          index += 1;
+          break;
+        }
+        index += 1;
+      }
+      tokens.push({ text: line.slice(start, index), start, length: index - start });
+      continue;
+    }
+
+    while (index < line.length && !/\s/.test(line[index])) {
+      index += 1;
+    }
+    tokens.push({ text: line.slice(start, index), start, length: index - start });
+  }
+
+  return tokens;
 }
 
 function publishDiagnostics(uri, text) {

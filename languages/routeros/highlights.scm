@@ -5,7 +5,6 @@
   (heredoc_start)
 ] @string
 
-(command_name) @function
 (variable_name) @property
 (function_definition name: (word) @function)
 (file_descriptor) @number
@@ -50,9 +49,6 @@
   (command (_) @constant)
   (#match? @constant "^-")
 )
-
-((word) @namespace
-  (#match? @namespace "^/"))
 
 ((word) @keyword
   (#match? @keyword "^:"))

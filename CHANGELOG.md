@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.9
+
+- tune RouterOS token classification toward the reference VS Code screenshot
+- keep root path commands like `/interface` and `/caps-man` visually neutral
+- color path subcommands and parameter names separately from their values
+- make `add` and `set` style verbs stand out as command keywords
+
 ## 0.1.8
 
 - simplify semantic token coloring to better match the VS Code RouterOS grammar
