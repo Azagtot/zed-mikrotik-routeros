@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.10
+
+- disable semantic token coloring from the RouterOS language server
+- keep completion, diagnostics, hover, and go to definition in the LSP
+- rely on Zed tree-sitter highlighting only, which gives a more stable and VS Code-like visual result
+
 ## 0.1.9
 
 - tune RouterOS token classification toward the reference VS Code screenshot
