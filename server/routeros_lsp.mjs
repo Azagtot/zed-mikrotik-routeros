@@ -4,7 +4,7 @@ import { stdin, stdout, exit } from "node:process";
 
 const SERVER_INFO = {
   name: "mikrotik-routeros-zed",
-  version: "0.1.9",
+  version: "0.1.10",
 };
 
 const TOKEN_TYPES = [
@@ -593,13 +593,6 @@ function handleMessage(message) {
           triggerCharacters: ["/", " ", "-", "=", ":", "$"],
           resolveProvider: false,
         },
-        semanticTokensProvider: {
-          legend: {
-            tokenTypes: TOKEN_TYPES,
-            tokenModifiers: TOKEN_MODIFIERS,
-          },
-          full: true,
-        },
       },
       serverInfo: SERVER_INFO,
     });
@@ -660,15 +653,6 @@ function handleMessage(message) {
 
   if (message.method === "textDocument/hover") {
     reply(message.id, getHover(message.params));
-    return;
-  }
-
-  if (message.method === "textDocument/semanticTokens/full") {
-    const { uri } = message.params.textDocument;
-    const text = documents.get(uri) ?? "";
-    reply(message.id, {
-      data: buildSemanticTokens(text),
-    });
     return;
   }
 
@@ -1033,219 +1017,6 @@ function makeRange(line, character, length) {
 
 function escapeMarkdownInlineCode(value) {
   return value.replace(/`/g, "\\`");
-}
-
-function buildSemanticTokens(text) {
-  const data = [];
-  const tokens = [];
-  const lines = text.split(/\r?\n/);
-
-  const pushToken = (line, start, length, tokenType) => {
-    const tokenTypeIndex = TOKEN_TYPES.indexOf(tokenType);
-    if (tokenTypeIndex === -1 || length <= 0) {
-      return;
-    }
-    tokens.push({ line, start, length, tokenTypeIndex });
-  };
-
-  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
-    const line = lines[lineIndex];
-    if (!line) {
-      continue;
-    }
-
-    const commentStart = line.indexOf("#");
-    const semanticRangeEnd = commentStart >= 0 ? commentStart : line.length;
-
-    if (commentStart >= 0) {
-      pushToken(lineIndex, commentStart, line.length - commentStart, "comment");
-    }
-
-    for (const match of line.slice(0, semanticRangeEnd).matchAll(/"([^"\\]|\\.)*"/g)) {
-      pushToken(lineIndex, match.index ?? 0, match[0].length, "string");
-    }
-
-    for (const match of line.slice(0, semanticRangeEnd).matchAll(/:global\s+([A-Za-z_][A-Za-z0-9_]*)\s+do=/g)) {
-      const start = (match.index ?? 0) + match[0].indexOf(match[1]);
-      pushToken(lineIndex, start, match[1].length, "function");
-    }
-
-    for (const match of line.slice(0, semanticRangeEnd).matchAll(/:(?:local|global)\s+([A-Za-z_][A-Za-z0-9_]*)/g)) {
-      const start = (match.index ?? 0) + match[0].indexOf(match[1]);
-      pushToken(lineIndex, start, match[1].length, "variable");
-    }
-
-    for (const match of line.slice(0, semanticRangeEnd).matchAll(/\$[A-Za-z_][A-Za-z0-9_]*/g)) {
-      pushToken(lineIndex, match.index ?? 0, match[0].length, "variable");
-    }
-
-    for (const match of line.slice(0, semanticRangeEnd).matchAll(/(^|\s)(:\w[\w-]*)/g)) {
-      const token = match[2];
-      const start = (match.index ?? 0) + match[0].lastIndexOf(token);
-
-      if (token.startsWith(":")) {
-        const bareToken = token.slice(1);
-        if (TEXTMATE_KEYWORDS.includes(bareToken)) {
-          pushToken(lineIndex, start, token.length, "keyword");
-        } else {
-          pushToken(lineIndex, start, token.length, "function");
-        }
-      }
-    }
-
-    for (const keyword of TEXTMATE_KEYWORDS) {
-      const regex = new RegExp(`(^|\\s)(${escapeRegExp(keyword)})(?=\\s|$)`, "g");
-      for (const match of line.slice(0, semanticRangeEnd).matchAll(regex)) {
-        const start = (match.index ?? 0) + match[0].lastIndexOf(keyword);
-        pushToken(lineIndex, start, keyword.length, "keyword");
-      }
-    }
-
-    for (const builtin of TEXTMATE_BUILTIN_COMMANDS) {
-      const regex = new RegExp(`(^|\\s)(${escapeRegExp(builtin)})(?=\\s|$)`, "g");
-      for (const match of line.slice(0, semanticRangeEnd).matchAll(regex)) {
-        const start = (match.index ?? 0) + match[0].lastIndexOf(builtin);
-        pushToken(lineIndex, start, builtin.length, "function");
-      }
-    }
-
-    for (const operatorWord of TEXTMATE_OPERATOR_WORDS) {
-      const regex = new RegExp(`(^|\\s)(${escapeRegExp(operatorWord)})(?=\\s|$)`, "g");
-      for (const match of line.slice(0, semanticRangeEnd).matchAll(regex)) {
-        const start = (match.index ?? 0) + match[0].lastIndexOf(operatorWord);
-        pushToken(lineIndex, start, operatorWord.length, "keyword");
-      }
-    }
-
-    const semanticTokens = classifyRouterOsLine(line.slice(0, semanticRangeEnd));
-    for (const token of semanticTokens) {
-      pushToken(lineIndex, token.start, token.length, token.type);
-    }
-  }
-
-  tokens.sort((left, right) => {
-    if (left.line !== right.line) {
-      return left.line - right.line;
-    }
-    if (left.start !== right.start) {
-      return left.start - right.start;
-    }
-    if (left.length !== right.length) {
-      return left.length - right.length;
-    }
-    return left.tokenTypeIndex - right.tokenTypeIndex;
-  });
-
-  let previousLine = 0;
-  let previousStart = 0;
-  for (const token of tokens) {
-    const deltaLine = token.line - previousLine;
-    const deltaStart = deltaLine === 0 ? token.start - previousStart : token.start;
-    if (deltaLine < 0 || deltaStart < 0) {
-      continue;
-    }
-    data.push(deltaLine, deltaStart, token.length, token.tokenTypeIndex, 0);
-    previousLine = token.line;
-    previousStart = token.start;
-  }
-
-  return data;
-}
-
-function classifyRouterOsLine(line) {
-  const classified = [];
-  const lexed = lexRouterOsLine(line);
-  let inPathPrefix = false;
-
-  for (const token of lexed) {
-    const text = token.text;
-
-    if (!text) {
-      continue;
-    }
-
-    if (text.startsWith("/")) {
-      inPathPrefix = true;
-      continue;
-    }
-
-    if (inPathPrefix) {
-      if (VERBS.includes(text)) {
-        classified.push({ start: token.start, length: token.length, type: "keyword" });
-        inPathPrefix = false;
-        continue;
-      }
-
-      if (!text.startsWith(":") && !text.startsWith("$") && !text.includes("=") && text !== "\\" && text !== "[" && text !== "]") {
-        classified.push({ start: token.start, length: token.length, type: "property" });
-        continue;
-      }
-    }
-
-    const equalsIndex = text.indexOf("=");
-    if (equalsIndex > 0) {
-      const key = text.slice(0, equalsIndex);
-      const value = text.slice(equalsIndex + 1);
-      if (/^[A-Za-z0-9._-]+$/.test(key)) {
-        classified.push({ start: token.start, length: key.length, type: "property" });
-      }
-      if (value && !(value.startsWith("\"") && value.endsWith("\""))) {
-        classified.push({
-          start: token.start + equalsIndex + 1,
-          length: value.length,
-          type: "variable",
-        });
-      }
-      inPathPrefix = false;
-      continue;
-    }
-
-    if (VERBS.includes(text)) {
-      classified.push({ start: token.start, length: token.length, type: "keyword" });
-      inPathPrefix = false;
-      continue;
-    }
-  }
-
-  return classified;
-}
-
-function lexRouterOsLine(line) {
-  const tokens = [];
-  let index = 0;
-
-  while (index < line.length) {
-    const char = line[index];
-    if (/\s/.test(char)) {
-      index += 1;
-      continue;
-    }
-
-    const start = index;
-    if (char === "\"") {
-      index += 1;
-      while (index < line.length) {
-        if (line[index] === "\\" && index + 1 < line.length) {
-          index += 2;
-          continue;
-        }
-        if (line[index] === "\"") {
-          index += 1;
-          break;
-        }
-        index += 1;
-      }
-      tokens.push({ text: line.slice(start, index), start, length: index - start });
-      continue;
-    }
-
-    while (index < line.length && !/\s/.test(line[index])) {
-      index += 1;
-    }
-    tokens.push({ text: line.slice(start, index), start, length: index - start });
-  }
-
-  return tokens;
 }
 
 function publishDiagnostics(uri, text) {
