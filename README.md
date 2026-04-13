@@ -5,12 +5,12 @@ Zed extension for MikroTik RouterOS `.rsc` files.
 It currently provides:
 
 - `.rsc` language association as `RouterOS Script`
-- basic syntax support for RouterOS scripts
-- semantic token highlighting from a bundled language server
+- RouterOS-specific syntax highlighting
 - command completion for common RouterOS sections, verbs, parameters, and values
 - ready-to-use snippets for firewall, NAT, WireGuard, VLAN, BGP, OSPF, queues, CAPsMAN, scheduler, and other common tasks
 - RouterOS `v6` and `v7` snippet variants where syntax differs
 - lightweight diagnostics for common RouterOS mistakes
+- hover and go-to-definition for `:global ... do=` and `$name` references
 
 ## Install locally
 
@@ -21,20 +21,9 @@ It currently provides:
 
 ## Recommended Zed settings
 
-For richer RouterOS highlighting in Zed, enable semantic tokens for this language.
-This extension provides richer tokenization through its language server, while the
-tree-sitter fallback is intentionally basic because RouterOS syntax does not map
-cleanly to Bash.
-
-```json
-{
-  "languages": {
-    "RouterOS Script": {
-      "semantic_tokens": "full"
-    }
-  }
-}
-```
+No special settings are required for syntax highlighting.
+The extension provides its own RouterOS grammar, and completions/diagnostics are
+served by the bundled language server.
 
 ## What completion covers
 

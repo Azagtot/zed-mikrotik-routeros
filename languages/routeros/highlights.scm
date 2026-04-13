@@ -1,72 +1,55 @@
-[
-  (string)
-  (raw_string)
-  (heredoc_body)
-  (heredoc_start)
-] @string
-
-(variable_name) @property
-(function_definition name: (word) @function)
-(file_descriptor) @number
 (comment) @comment
 
-[
-  "case"
-  "do"
-  "done"
-  "elif"
-  "else"
-  "esac"
-  "export"
-  "fi"
-  "for"
-  "function"
-  "if"
-  "in"
-  "select"
-  "then"
-  "unset"
-  "until"
-  "while"
-] @keyword
+(control_keyword) @keyword
+(variable) @variable
 
 [
-  (command_substitution)
-  (process_substitution)
-  (expansion)
-] @embedded
+  "["
+  "]"
+] @constant
 
-[
-  "$"
-  "&&"
-  ">"
-  ">>"
-  "<"
-  "|"
-] @operator
+(string) @attribute
 
-(
-  (command (_) @constant)
-  (#match? @constant "^-")
-)
+(parameter
+  name: (word) @property)
 
-((word) @keyword
-  (#match? @keyword "^:"))
+(parameter
+  value: (value
+    (string) @attribute))
 
-((word) @property
-  (#match? @property "^[A-Za-z0-9._-]+=$"))
+(parameter
+  value: (value
+    (variable) @variable))
+
+(parameter
+  value: (value
+    (word) @type))
+
+((statement
+  (line_continuation)
+  (word) @type))
 
 ((word) @constant
-  (#match? @constant "^(yes|no|true|false)$"))
+  (#match? @constant "^(add|set|remove|print|enable|disable|export|find|edit|get|monitor|reset-counters|move|rename|copy|make-static|setup)$"))
 
-((word) @number
-  (#match? @number "^[0-9]+([smhdw]|\\.[0-9]+)?$"))
+((statement
+  (path)
+  (word) @property))
 
-((word) @type
-  (#match? @type "^(input|output|forward|prerouting|postrouting|srcnat|dstnat)$"))
+((statement
+  (path)
+  (word) @property
+  (word) @property))
 
-((word) @keyword
-  (#match? @keyword "^(accept|drop|reject|log|fasttrack-connection|jump|return|passthrough|mark-routing|mark-connection|mark-packet|src-nat|masquerade|dst-nat|netmap|redirect|same|notrack)$"))
+((statement
+  (path)
+  (word) @property
+  (word) @property
+  (word) @property))
 
-((word) @keyword
-  (#match? @keyword "^(add|set|remove|print|enable|disable|export|find|edit|get|monitor|reset-counters|move|rename|copy|make-static|setup)$"))
+((statement
+  (path)
+  (word) @property
+  (word) @property
+  (word) @property
+  (word) @property))

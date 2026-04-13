@@ -4,7 +4,7 @@ import { stdin, stdout, exit } from "node:process";
 
 const SERVER_INFO = {
   name: "mikrotik-routeros-zed",
-  version: "0.1.10",
+  version: "0.1.11",
 };
 
 const TOKEN_TYPES = [
@@ -590,7 +590,7 @@ function handleMessage(message) {
         hoverProvider: true,
         definitionProvider: true,
         completionProvider: {
-          triggerCharacters: ["/", " ", "-", "=", ":", "$"],
+          triggerCharacters: ["/", " ", "-", "=", ":", "$", "["],
           resolveProvider: false,
         },
       },

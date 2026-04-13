@@ -1,14 +1,15 @@
 id = "mikrotik-routeros"
 name = "MikroTik RouterOS"
-version = "0.1.10"
+version = "0.1.11"
 schema_version = 1
 authors = ["Andrey Lebedev"]
 description = "RouterOS syntax support and command completion for Zed."
 repository = "https://github.com/Azagtot/zed-mikrotik-routeros"
+languages = ["languages/routeros"]
 
-[grammars.bash]
-repository = "https://github.com/tree-sitter/tree-sitter-bash"
-rev = "a06c2e4415e9bc0346c6b86d401879ffb44058f7"
+[grammars.routeros]
+repository = "https://github.com/Azagtot/tree-sitter-routeros"
+rev = "bcba68c8379facf0791654e8136ae4591a8ec97c"
 
 [language_servers.routeros-lsp]
 name = "RouterOS LSP"
