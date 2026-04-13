@@ -1,5 +1,5 @@
 name = "RouterOS Script"
-grammar = "bash"
+grammar = "routeros"
 path_suffixes = ["rsc"]
 line_comments = ["# "]
 tab_size = 4
@@ -13,6 +13,4 @@ brackets = [
 ]
 
 word_characters = ["-", "/", ":"]
-
-[overrides.string]
 completion_query_characters = ["-", "/", ":"]
