@@ -1,8 +1,8 @@
 id = "mikrotik-routeros"
 name = "MikroTik RouterOS"
-version = "0.1.12"
+version = "0.1.13"
 schema_version = 1
-authors = ["Andrey Lebedev"]
+authors = ["Azagtot"]
 description = "RouterOS syntax support and command completion for Zed."
 repository = "https://github.com/Azagtot/zed-mikrotik-routeros"
 languages = ["languages/routeros"]

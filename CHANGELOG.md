@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.13
+
+- update published extension metadata to use the GitHub identity `Azagtot`
+- keep the clean noreply-authored history introduced for publication validation
+
 ## 0.1.12
 
 - normalize published git history to a GitHub-linked noreply identity
