@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.12
+
+- normalize published git history to a GitHub-linked noreply identity
+- publish a clean follow-up release so Zed catalog validation sees a single contributor identity
+
 ## 0.1.10
 
 - disable semantic token coloring from the RouterOS language server
